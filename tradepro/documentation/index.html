@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TradePro Documentation</title>
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Documentation">
+<strong>TradePro</strong><small>Documentation v1.0.0</small>
+<a href="#intro">Introduction</a><a href="#files">File structure</a><a href="#install">Installation</a><a href="#colours">Customising colours</a><a href="#dark">Dark mode</a><a href="#fonts">Fonts</a><a href="#header">Header &amp; navigation</a><a href="#components">Components</a><a href="#forms">Forms</a><a href="#maps">Maps</a><a href="#images">Images &amp; placeholders</a><a href="#browsers">Browser support</a><a href="#credits">Credits</a><a href="#changelog">Changelog</a>
+</nav>
+<main>
+<h1>TradePro - Trade &amp; Home Services HTML Template</h1>
+<p>Thank you for purchasing TradePro. This guide explains how to install, customise and launch your site. TradePro is plain HTML, CSS and vanilla JavaScript. There is no build step, no jQuery and no framework to learn.</p>
+
+<h2 id="intro">Introduction</h2>
+<p>TradePro is designed for plumbers, electricians, builders, landscapers, cleaners and other local service businesses. It includes 13 pages, three home page variants, light and dark themes, and accessible components.</p>
+<div class="note"><strong>Preview photos are not included.</strong> The demo uses CSS and SVG placeholders only. No photographs or AI-generated images are in the download. Replace each placeholder with your own photography (see <a href="#images">Images &amp; placeholders</a>).</div>
+
+<h2 id="files">File structure</h2>
+<pre><code>tradepro/
+  index.html                 Home (plumber accent)
+  index-electrician.html     Home variant (amber accent)
+  index-builder.html         Home variant (orange accent)
+  about.html  services.html  service-single.html  pricing.html
+  projects.html  project-single.html  blog.html  blog-single.html
+  contact.html  404.html
+  css/style.css              All styles, organised in numbered sections
+  js/main.js                 All behaviour, vanilla JS
+  fonts/                     Optional folder for self-hosted fonts
+  documentation/index.html   This file</code></pre>
+
+<h2 id="install">Installation</h2>
+<ol>
+<li>Unzip the download. Upload the contents of the <code>tradepro</code> folder to your web host (cPanel File Manager, FTP, Netlify, Cloudflare Pages, GitHub Pages and so on).</li>
+<li>Open <code>index.html</code> in a browser to check it works. You can also preview locally by double-clicking the file.</li>
+<li>Search and replace the placeholder details in every HTML file: phone <code>(555) 012-3456</code> and <code>+15550123456</code>, email <code>hello@yourdomain.com</code>, the address and the company name.</li>
+<li>Edit page text directly in the HTML. Each page is standalone, so there is no template language to learn.</li>
+<li>Delete the pages and the <code>documentation</code> folder you do not need before going live.</li>
+</ol>
+<p>The header, footer and sprite are repeated in each page. Use find-and-replace across files, or use a static site generator or server-side includes if you prefer partials.</p>
+
+<h2 id="colours">Customising colours</h2>
+<p>All colours are CSS custom properties at the top of <code>css/style.css</code> (section 1). Change them once and the whole site updates.</p>
+<pre><code>:root{
+  --accent:#0b63ce;        /* buttons, icons, highlights */
+  --accent-strong:#084c9f; /* hover state */
+  --accent-soft:#e6f0fc;   /* icon tiles, tinted backgrounds */
+  --accent-text:#0b63ce;   /* accent used as text on white */
+  --on-accent:#fff;        /* text on accent backgrounds */
+  --navy:#0e1c2f;          /* hero, footer, dark sections */
+}</code></pre>
+<h3>Accent variants</h3>
+<p>Set <code>data-accent</code> on the <code>&lt;html&gt;</code> element to switch palettes. Two are included: <code>electrician</code> and <code>builder</code>. To add your own, copy one block in the stylesheet:</p>
+<pre><code>:root[data-accent="landscaper"]{
+  --accent:#2f7d32; --accent-strong:#1f5c22; --accent-soft:#e5f3e6;
+  --accent-text:#2f7d32; --on-accent:#fff; --navy:#10231a; --navy-2:#173626;
+}</code></pre>
+<p>Check that <code>--on-accent</code> on <code>--accent</code> has a contrast ratio of at least 4.5:1, and that <code>--accent-text</code> on white does too. Light accents (yellow, amber) need dark text, as the electrician variant shows.</p>
+
+<h2 id="dark">Dark mode</h2>
+<p>Dark mode is controlled by the <code>data-theme</code> attribute on <code>&lt;html&gt;</code> (<code>light</code> or <code>dark</code>). On first visit the visitor's system preference is used. The header toggle saves the choice in <code>localStorage</code> (key <code>tradepro-theme</code>). To force a theme, set <code>data-theme="light"</code> in the HTML and remove the theme lines from <code>js/main.js</code> (section "Theme"). Dark values are defined under <code>:root[data-theme="dark"]</code>.</p>
+
+<h2 id="fonts">Fonts</h2>
+<p>TradePro uses <strong>Sora</strong> (headings) and <strong>Inter</strong> (body) from Google Fonts, loaded with a <code>&lt;link&gt;</code> in each page's head. Metric-adjusted local fallbacks ("Sora Fallback" and "Inter Fallback") prevent layout shift and keep the site readable if the font fails to load or you are offline.</p>
+<h3>Changing fonts</h3>
+<p>Update the Google Fonts link in each page and the two variables in <code>css/style.css</code>: <code>--font-head</code> and <code>--font-body</code>.</p>
+<h3>Self-hosting (recommended for GDPR)</h3>
+<p>Download the woff2 files (for example from google-webfonts-helper), place them in <code>fonts/</code>, remove the Google Fonts links and add:</p>
+<pre><code>@font-face{font-family:"Inter";src:url("../fonts/inter-var.woff2") format("woff2");font-weight:400 600;font-display:swap}
+@font-face{font-family:"Sora";src:url("../fonts/sora-var.woff2") format("woff2");font-weight:600 800;font-display:swap}</code></pre>
+
+<h2 id="header">Header &amp; navigation</h2>
+<p>The sticky header contains the logo, navigation, phone number, quote button, dark mode toggle and mobile menu button. Dropdowns use CSS (<code>:hover</code> and <code>:focus-within</code>) so they work with keyboards. On screens up to 960px the menu becomes a full-screen panel; press Escape to close it. Mark the current page with <code>aria-current="page"</code>. On phones a sticky "Call now" bar is shown (class <code>.call-now</code>); update its <code>tel:</code> link.</p>
+<p>To use your own logo image, replace the contents of the <code>.logo</code> link with an <code>&lt;img&gt;</code> that has <code>alt</code> text.</p>
+
+<h2 id="components">Components</h2>
+<table>
+<thead><tr><th>Component</th><th>Markup hook</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Accordion</td><td><code>.accordion</code> / <code>.acc-item</code></td><td>Add <code>data-single</code> to the wrapper to keep one panel open at a time. Add <code>is-open</code> and <code>aria-expanded="true"</code> to open by default.</td></tr>
+<tr><td>Tabs</td><td><code>[data-tabs]</code></td><td>Arrow keys, Home and End supported. Each <code>role="tab"</code> needs <code>aria-controls</code> matching a <code>role="tabpanel"</code> id.</td></tr>
+<tr><td>Testimonial slider</td><td><code>[data-slider]</code></td><td>Dots are generated automatically. Autoplay pauses on hover and focus and is disabled for visitors who prefer reduced motion. Remove <code>play()</code> in main.js to disable autoplay.</td></tr>
+<tr><td>Before / after</td><td><code>[data-ba]</code></td><td>Built on a native range input so it works with keyboard and touch. Replace the two <code>.ba-layer</code> divs with your own <code>&lt;img&gt;</code> elements (keep <code>class="ba-layer"</code> and add <code>object-fit:cover</code>).</td></tr>
+<tr><td>Counters</td><td><code>data-count</code></td><td>Optional <code>data-suffix</code> and <code>data-prefix</code>. Animates once when scrolled into view.</td></tr>
+<tr><td>Project filter</td><td><code>[data-filter-group]</code></td><td>Buttons use <code>data-filter="category"</code>; items use <code>data-category="category"</code> (space separated for several).</td></tr>
+<tr><td>Cookie notice</td><td><code>.cookie</code></td><td>Stores the choice in <code>localStorage</code>. It is a notice only: it does not block scripts. Wire the Accept/Decline buttons to your consent tool if you load analytics.</td></tr>
+<tr><td>Back to top</td><td><code>.to-top</code></td><td>Appears after scrolling 600px.</td></tr>
+</tbody></table>
+
+<h2 id="forms">Forms</h2>
+<p>Forms use HTML5 validation attributes (<code>required</code>, <code>type="email"</code>, <code>pattern</code>, <code>minlength</code>) plus a small script that shows inline messages and moves focus to the first invalid field. Out of the box, <strong>forms do not send email</strong>; the demo shows a success message only. Connect one in either way:</p>
+<h3>Option A: form service (no server code)</h3>
+<p>Add a <code>data-endpoint</code> attribute with the URL from Formspree, Basin, Getform, Netlify Forms or similar. The script submits the form with <code>fetch</code> and shows the success or error message.</p>
+<pre><code>&lt;form class="quote-card" data-form data-endpoint="https://formspree.io/f/your-id" novalidate&gt;</code></pre>
+<h3>Option B: your own PHP/Node handler</h3>
+<p>Point <code>data-endpoint</code> at your script, which should accept a <code>POST</code> and return a 2xx status. Validate and sanitise on the server; client-side checks are a convenience only.</p>
+<p>Each form includes a hidden honeypot field named <code>website</code>. Discard any submission where it is filled in. Consider adding reCAPTCHA or Turnstile for additional protection.</p>
+
+<h2 id="maps">Maps</h2>
+<p>The contact page has a map placeholder (<code>.map-ph</code>). Replace it with an embed iframe from Google Maps or OpenStreetMap and give it a <code>title</code> attribute, for example <code>&lt;iframe title="Map showing our location" loading="lazy" src="..."&gt;&lt;/iframe&gt;</code>. Add <code>width:100%; min-height:380px; border:0; border-radius:20px</code> in your CSS.</p>
+
+<h2 id="images">Images &amp; placeholders</h2>
+<p>Placeholders are <code>.ph</code> elements (aspect ratio helpers: <code>.ph--16x10</code>, <code>.ph--4x3</code>, <code>.ph--1x1</code>, <code>.ph--tall</code>). To swap in a photo:</p>
+<pre><code>&lt;img class="ph-img" src="images/team.jpg" alt="Our team on site" width="800" height="600" loading="lazy"&gt;</code></pre>
+<p>Use WebP or optimised JPEG, always supply <code>width</code>/<code>height</code> and meaningful <code>alt</code> text, and add <code>.ph-img{width:100%;height:100%;object-fit:cover;border-radius:12px}</code> to your CSS. Icons are an inline SVG sprite at the top of each page body (<code>&lt;use href="#i-name"&gt;</code>). All icons were drawn for this template and are included under the same licence.</p>
+
+<h2 id="browsers">Browser support</h2>
+<p>Current versions of Chrome, Edge, Firefox and Safari (including iOS). Modern CSS (custom properties, <code>color-mix()</code>, <code>:has()</code>, grid) is used; very old browsers such as Internet Explorer are not supported. Layouts are tested from 360px to 1920px.</p>
+
+<h2 id="credits">Credits</h2>
+<ul>
+<li>Fonts: <a href="https://fonts.google.com/specimen/Sora">Sora</a> and <a href="https://fonts.google.com/specimen/Inter">Inter</a>, both SIL Open Font License 1.1.</li>
+<li>Icons: custom inline SVG set created for this template.</li>
+<li>JavaScript: written from scratch in vanilla JS. No third-party libraries.</li>
+<li>All names, addresses, phone numbers and prices in the demo are fictional.</li>
+<li>Author: <a href="https://codecanyon.net/user/keepsoft">Keepsoft</a>. Copyright (C) 2026 Keepsoft. Support via the item comments on CodeCanyon.</li>
+</ul>
+
+<h2 id="changelog">Changelog</h2>
+<p><strong>1.0.0</strong> - Initial release.</p>
+</main>
+</div>
+</body>
+</html>
