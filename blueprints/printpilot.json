@@ -1,0 +1,95 @@
+{
+ "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+ "meta": {
+  "title": "PrintPilot live demo",
+  "author": "Keepsoft",
+  "description": "Throwaway live demo of PrintPilot with seeded Australian sample data."
+ },
+ "landingPage": "/wp-admin/admin.php?page=printpilot",
+ "preferredVersions": {
+  "php": "8.2",
+  "wp": "latest"
+ },
+ "features": {
+  "networking": true
+ },
+ "steps": [
+  {
+   "step": "mkdir",
+   "path": "/wordpress/wp-content/mu-plugins"
+  },
+  {
+   "step": "writeFile",
+   "path": "/wordpress/wp-content/mu-plugins/keepsoft-demo.php",
+   "data": "<?php\n/**\n * Plugin Name: Keepsoft Demo Helper\n * Description: Demo-only helper loaded by the Keepsoft live-demo blueprints. Not part of any product download.\n */\nif ( ! defined( 'ABSPATH' ) ) { exit; }\n\nfunction keepsoft_demo_cfg() {\n\t$c = get_option( 'keepsoft_demo', array() );\n\treturn is_array( $c ) ? $c : array();\n}\n\n// No outbound mail, no update checks, no nags.\nadd_filter( 'pre_wp_mail', '__return_true' );\nadd_filter( 'auto_update_core', '__return_false' );\nadd_filter( 'automatic_updater_disabled', '__return_true' );\nadd_filter( 'woocommerce_enable_setup_wizard', '__return_false' );\nadd_filter( 'woocommerce_allow_marketplace_suggestions', '__return_false' );\nadd_filter( 'woocommerce_helper_suppress_admin_notices', '__return_true' );\nforeach ( array( 'pre_site_transient_update_core', 'pre_site_transient_update_plugins', 'pre_site_transient_update_themes' ) as $t ) {\n\tadd_filter( $t, function () {\n\t\treturn (object) array( 'last_checked' => time(), 'version_checked' => get_bloginfo( 'version' ), 'updates' => array() );\n\t} );\n}\nadd_action( 'admin_init', function () {\n\tremove_action( 'admin_notices', 'update_nag', 3 );\n\tremove_action( 'network_admin_notices', 'update_nag', 3 );\n\tremove_action( 'admin_notices', 'maintenance_nag' );\n\tremove_action( 'welcome_panel', 'wp_welcome_panel' );\n\tdelete_transient( '_wc_activation_redirect' );\n}, 1 );\n\n// The throwaway-demo notice.\nadd_action( 'admin_notices', function () {\n\t$c   = keepsoft_demo_cfg();\n\t$buy = ! empty( $c['buy'] ) ? $c['buy'] : 'https://codecanyon.net/user/keepsoft';\n\t$nm  = ! empty( $c['name'] ) ? $c['name'] : 'this plugin';\n\techo '<div class=\"notice notice-info keepsoft-notice\" style=\"border-left-color:#2563eb\"><p><strong>This is a throwaway Keepsoft demo</strong> &mdash; changes are not saved and the site resets when you close the tab. <a href=\"' . esc_url( $buy ) . '\" target=\"_blank\" rel=\"noopener\"><strong>Buy ' . esc_html( $nm ) . ' on CodeCanyon &rarr;</strong></a></p></div>';\n}, 1 );\nadd_action( 'admin_head', function () {\n\techo '<style>.update-nag,.notice.woocommerce-message,.wc-admin-notice,#wp-admin-bar-updates,.woocommerce-store-alerts,#wc-admin-onboarding-banner,.jetpack-jitm-message,#contextual-help-link-wrap,#screen-options-link-wrap{display:none!important}.keepsoft-notice{margin:12px 20px 0 2px!important}</style>';\n} );\nadd_filter( 'show_admin_bar', '__return_true' );\n\n// Small front-end pill with quick links.\nadd_action( 'wp_footer', function () {\n\t$c = keepsoft_demo_cfg();\n\tif ( empty( $c ) ) { return; }\n\t$links = ! empty( $c['links'] ) && is_array( $c['links'] ) ? $c['links'] : array();\n\t$buy   = ! empty( $c['buy'] ) ? $c['buy'] : 'https://codecanyon.net/user/keepsoft';\n\techo '<div style=\"position:fixed;left:12px;bottom:12px;z-index:99999;background:#0f172a;color:#e2e8f0;font:13px/1.4 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);max-width:calc(100vw - 24px)\">';\n\techo '<strong style=\"color:#fff\">Keepsoft demo</strong> &middot; throwaway site';\n\tforeach ( $links as $l ) { if ( '@orders' === $l[1] ) { $l[1] = ( class_exists( '\\\\Automattic\\\\WooCommerce\\\\Utilities\\\\OrderUtil' ) && \\Automattic\\WooCommerce\\Utilities\\OrderUtil::custom_orders_table_usage_is_enabled() ) ? 'admin.php?page=wc-orders' : 'edit.php?post_type=shop_order'; } echo ' &middot; <a style=\"color:#7dd3fc\" href=\"' . esc_url( 0 === strpos( $l[1], '/' ) ? home_url( $l[1] ) : admin_url( $l[1] ) ) . '\">' . esc_html( $l[0] ) . '</a>'; }\n\techo ' &middot; <a style=\"color:#fbbf24\" target=\"_blank\" rel=\"noopener\" href=\"' . esc_url( $buy ) . '\">Buy on CodeCanyon</a></div>';\n} );\n\n/**\n * AccessFix demo shim: the scanner normally fetches its own pages over HTTP. Inside WordPress Playground\n * a site cannot reliably call itself, so for scanner requests we render the page in-process (post content\n * in a simple page shell), run AccessFix's real render-time fixers over it, and hand that HTML back.\n */\nfunction keepsoft_af_install_shim() {\n\tadd_filter( 'pre_http_request', function ( $pre, $args, $url ) {\n\t\tif ( false === strpos( $url, 'accessfix_scan=' ) || ! class_exists( 'AccessFix_Fixers' ) ) { return $pre; }\n\t\t$clean = remove_query_arg( array( 'accessfix_scan', 'af_ts' ), $url );\n\t\t$pid   = (int) url_to_postid( $clean );\n\t\t$post  = $pid ? get_post( $pid ) : null;\n\t\tif ( ! $post ) {\n\t\t\t$front = (int) get_option( 'page_on_front' );\n\t\t\t$post  = $front ? get_post( $front ) : null;\n\t\t}\n\t\tif ( ! $post ) { return array( 'headers' => array(), 'body' => '', 'response' => array( 'code' => 404, 'message' => 'Not Found' ), 'cookies' => array(), 'filename' => null ); }\n\t\t$content = apply_filters( 'the_content', $post->post_content );\n\t\t$nav = '';\n\t\tforeach ( get_posts( array( 'post_type' => 'page', 'numberposts' => 8, 'orderby' => 'ID', 'order' => 'ASC' ) ) as $p ) { $nav .= '<a href=\"' . esc_url( get_permalink( $p ) ) . '\">' . esc_html( $p->post_title ) . '</a> '; }\n\t\t$html = '<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>' . esc_html( get_the_title( $post ) ) . ' - ' . esc_html( get_bloginfo( 'name' ) ) . '</title></head><body><header><a href=\"' . esc_url( home_url( '/' ) ) . '\">' . esc_html( get_bloginfo( 'name' ) ) . '</a><nav>' . $nav . '</nav></header><main id=\"content\">' . $content . '</main><footer><p>&copy; ' . esc_html( get_bloginfo( 'name' ) ) . '</p></footer></body></html>';\n\t\t// Equivalent of AccessFix_Fixers::process(), without its Content-Type check (REST responses are JSON).\n\t\t$set = function ( $prop, $val ) { $r = new ReflectionProperty( 'AccessFix_Fixers', $prop ); $r->setAccessible( true ); $r->setValue( null, $val ); };\n\t\t$get = function ( $prop ) { $r = new ReflectionProperty( 'AccessFix_Fixers', $prop ); $r->setAccessible( true ); return $r->getValue(); };\n\t\t$set( 'scan_mode', true ); $set( 'fixes', array() ); $set( 'ids', array() ); $set( 's', AccessFix_Settings::all() );\n\t\t$out = AccessFix_Fixers::apply( $html );\n\t\t$out .= '<!--af-fixes:' . base64_encode( wp_json_encode( array_slice( (array) $get( 'fixes' ), 0, 400 ) ) ) . '-->';\n\t\treturn array( 'headers' => array( 'content-type' => 'text/html' ), 'body' => $out, 'response' => array( 'code' => 200, 'message' => 'OK' ), 'cookies' => array(), 'filename' => null );\n\t}, 10, 3 );\n}\n$keepsoft_cfg = get_option( 'keepsoft_demo', array() );\nif ( is_array( $keepsoft_cfg ) && ! empty( $keepsoft_cfg['slug'] ) && 'accessfix' === $keepsoft_cfg['slug'] ) { keepsoft_af_install_shim(); }\n"
+  },
+  {
+   "step": "installPlugin",
+   "pluginData": {
+    "resource": "wordpress.org/plugins",
+    "slug": "woocommerce"
+   },
+   "options": {
+    "activate": true
+   }
+  },
+  {
+   "step": "installPlugin",
+   "pluginData": {
+    "resource": "url",
+    "url": "__BASE__/plugins/printpilot.zip"
+   },
+   "options": {
+    "activate": true
+   }
+  },
+  {
+   "step": "setSiteOptions",
+   "options": {
+    "blogname": "PrintPilot Demo \u2014 Keepsoft",
+    "blogdescription": "Live demo",
+    "keepsoft_demo": {
+     "slug": "printpilot",
+     "name": "PrintPilot",
+     "buy": "__BUY__",
+     "links": [
+      [
+       "Overview",
+       "admin.php?page=printpilot"
+      ],
+      [
+       "Print log",
+       "admin.php?page=printpilot&tab=log"
+      ],
+      [
+       "Orders",
+       "@orders"
+      ]
+     ]
+    },
+    "woocommerce_currency": "AUD",
+    "woocommerce_default_country": "AU:VIC",
+    "woocommerce_coming_soon": "no",
+    "woocommerce_store_pages_only": "no",
+    "woocommerce_onboarding_profile": {
+     "skipped": true
+    },
+    "woocommerce_task_list_hidden": "yes",
+    "woocommerce_task_list_complete": "yes",
+    "woocommerce_show_marketplace_suggestions": "no",
+    "woocommerce_allow_tracking": "no",
+    "woocommerce_admin_notices": [],
+    "woocommerce_calc_taxes": "yes",
+    "woocommerce_prices_include_tax": "no"
+   }
+  },
+  {
+   "step": "login",
+   "username": "admin"
+  },
+  {
+   "step": "runPHP",
+   "code": "<?php require_once '/wordpress/wp-load.php';\n// Keepsoft demo seed - PrintPilot. A Melbourne cafe: menu, 4 printers, routing rules, 10 orders and a realistic print log.\nglobal $wpdb; add_filter('pre_wp_mail','__return_true');\n// Do not let the live router print while we build demo orders; we write the log ourselves below.\nremove_action('woocommerce_order_status_changed',['PrintPilot_Router','on_status_changed'],20);\nupdate_option('woocommerce_calc_taxes','yes'); update_option('woocommerce_prices_include_tax','yes');\n$wpdb->query(\"DELETE FROM {$wpdb->prefix}woocommerce_tax_rates\");\nWC_Tax::_insert_tax_rate(['tax_rate_country'=>'AU','tax_rate'=>'10.0000','tax_rate_name'=>'GST','tax_rate_priority'=>1,'tax_rate_compound'=>0,'tax_rate_shipping'=>1,'tax_rate_order'=>1,'tax_rate_class'=>'']);\n$cats=[]; foreach(['Coffee','Brunch','Mains','Sides & sweets'] as $c){ $t=wp_insert_term($c,'product_cat'); $cats[$c]=is_wp_error($t)?get_term_by('name',$c,'product_cat')->term_id:$t['term_id']; }\n$menu=[['Flat White',5.2,'Coffee'],['Long Black',4.8,'Coffee'],['Iced Latte',6.5,'Coffee'],['Smashed Avo on Sourdough',21,'Brunch'],['Bacon & Egg Roll',12.5,'Brunch'],['Chicken Parmigiana',26,'Mains'],['Fish & Chips',24,'Mains'],['Banana Bread',7.5,'Sides & sweets'],['Lemon Tart',8.5,'Sides & sweets']];\n$P=[]; foreach($menu as $i=>[$n,$pr,$c]){ $p=new WC_Product_Simple(); $p->set_name($n); $p->set_sku('CAFE-'.(10+$i)); $p->set_regular_price($pr); $p->set_status('publish'); $p->set_category_ids([$cats[$c]]); $p->save(); $P[$n]=wc_get_product($p->get_id()); }\n// Printers\n$d=PrintPilot_Settings::printer_defaults();\n$printers=[\n 'pstation'=>array_merge($d,['id'=>'pstation','name'=>'Front counter (browser print)','method'=>'station_html','paper'=>'80']),\n 'pkitchen'=>array_merge($d,['id'=>'pkitchen','name'=>'Kitchen - Epson TM-T88VI (LAN)','method'=>'network','ip'=>'192.168.1.50','port'=>9100,'paper'=>'80','cut'=>'full','copies'=>1,'fallback_email'=>'kitchen@harbourcafe.com.au']),\n 'pbar'=>array_merge($d,['id'=>'pbar','name'=>'Barista - Star TSP143 (USB)','method'=>'station_escpos','connection'=>'usb','paper'=>'58']),\n 'pemail'=>array_merge($d,['id'=>'pemail','name'=>'Owner copy (email)','method'=>'email','email'=>'owner@harbourcafe.com.au','paper'=>'a4']),\n];\nupdate_option(PrintPilot_Settings::OPT_PRINTERS,$printers,false);\n$s=PrintPilot_Settings::get(); $s['default_printer']='pstation'; $s['default_template']='tkitchen'; $s['station_name']='Front counter iPad'; update_option(PrintPilot_Settings::OPT_SETTINGS,$s);\nupdate_option(PrintPilot_Settings::OPT_RULES,[\n ['id'=>'rkitchen','name'=>'Food orders - kitchen ticket','enabled'=>1,'statuses'=>['processing'],'categories'=>[$cats['Brunch'],$cats['Mains']],'shipping_methods'=>[],'payment_methods'=>[],'order_type'=>'any','meta_key'=>'','meta_value'=>'','printer'=>'pkitchen','template'=>'tkitchen','copies'=>1,'split_items'=>0,'stop'=>0],\n ['id'=>'rbar','name'=>'Coffee orders - barista ticket','enabled'=>1,'statuses'=>['processing'],'categories'=>[$cats['Coffee']],'shipping_methods'=>[],'payment_methods'=>[],'order_type'=>'any','meta_key'=>'','meta_value'=>'','printer'=>'pbar','template'=>'tkitchen','copies'=>1,'split_items'=>0,'stop'=>0],\n ['id'=>'rdelivery','name'=>'Delivery orders - packing slip at the counter','enabled'=>1,'statuses'=>['processing'],'categories'=>[],'shipping_methods'=>[],'payment_methods'=>[],'order_type'=>'delivery','meta_key'=>'','meta_value'=>'','printer'=>'pstation','template'=>'tpacking','copies'=>1,'split_items'=>0,'stop'=>0],\n ['id'=>'rreceipt','name'=>'Completed orders - receipt','enabled'=>1,'statuses'=>['completed'],'categories'=>[],'shipping_methods'=>[],'payment_methods'=>[],'order_type'=>'any','meta_key'=>'','meta_value'=>'','printer'=>'pstation','template'=>'treceipt','copies'=>1,'split_items'=>0,'stop'=>0],\n],false);\n// Orders\n$custs=[['Hannah','Doyle','0412 334 901','pickup',''],['Wei','Zhang','0421 778 036','pickup','Oat milk please'],['Sam','Pettigrew','0409 551 482','delivery','Gate code 4471, leave at door'],['Aisha','Rahman','0433 612 077','pickup',''],['Callum','Rees','0417 265 840','delivery',''],['Tess','Marino','0402 981 336','pickup','Extra hot'],['Nick','Papas','0438 417 202','pickup','No onion'],['Georgie','Lam','0425 190 663','delivery','Call on arrival'],['Ravi','Menon','0411 804 527','pickup',''],['Zoe','Whitlock','0407 336 918','pickup','Nut allergy - please check']];\n$baskets=[[['Flat White',2],['Banana Bread',1]],[['Iced Latte',1],['Bacon & Egg Roll',1]],[['Chicken Parmigiana',2],['Fish & Chips',1]],[['Long Black',1],['Smashed Avo on Sourdough',1]],[['Fish & Chips',2]],[['Flat White',1],['Lemon Tart',2]],[['Chicken Parmigiana',1],['Iced Latte',2]],[['Smashed Avo on Sourdough',2],['Flat White',2]],[['Long Black',2]],[['Bacon & Egg Roll',3],['Iced Latte',3]]];\n$orders=[];\nforeach($custs as $i=>$c){ $o=wc_create_order(['status'=>'pending']); $ago=[2,9,16,31,47,64,88,130,190,260][$i];\n $addr=['first_name'=>$c[0],'last_name'=>$c[1],'email'=>strtolower($c[0].'.'.$c[1]).'@gmail.com','phone'=>$c[2],'country'=>'AU','state'=>'VIC','postcode'=>'3030','city'=>'Point Cook','address_1'=>mt_rand(3,90).' Boardwalk Boulevard'];\n $o->set_address($addr,'billing'); $o->set_address($addr,'shipping');\n foreach($baskets[$i] as [$n,$q]) $o->add_product($P[$n],$q);\n $sh=new WC_Order_Item_Shipping(); if($c[3]==='delivery'){ $sh->set_method_title('Delivery (local)'); $sh->set_method_id('flat_rate'); $sh->set_total(6); } else { $sh->set_method_title('Pickup in store'); $sh->set_method_id('local_pickup'); $sh->set_total(0); } $o->add_item($sh);\n $o->set_payment_method($i%3?'stripe':'cod'); $o->set_payment_method_title($i%3?'Credit card':'Pay in store'); if($c[4]) $o->set_customer_note($c[4]);\n $o->set_date_created(gmdate('Y-m-d H:i:s',time()-$ago*60)); $o->calculate_totals(true); $o->set_status($i<3?'processing':'completed'); $o->save(); $orders[]=$o; }\n// Print log (written directly so nothing tries to reach a real printer)\n$t=PrintPilot_Install::table(); $wpdb->query(\"DELETE FROM $t\");\n$rows=[ // order idx, printer, template, status, attempts, source, error, minutes ago\n [0,'pkitchen','tkitchen','printed',1,'auto:processing','',2],[0,'pbar','tkitchen','printed',1,'auto:processing','',2],\n [1,'pbar','tkitchen','printed',1,'auto:processing','',9],[1,'pkitchen','tkitchen','printed',1,'auto:processing','',9],\n [2,'pkitchen','tkitchen','pending',0,'auto:processing','',1],[2,'pstation','tpacking','pending',0,'auto:processing','',1],\n [3,'pstation','treceipt','printed',1,'auto:completed','',31],[3,'pkitchen','tkitchen','failed',3,'auto:processing','Could not connect to 192.168.1.50:9100 (timed out). Fallback email sent.',47],\n [4,'pstation','tpacking','printed',1,'auto:processing','',47],[5,'pbar','tkitchen','printed',1,'auto:processing','',64],\n [6,'pkitchen','tkitchen','printed',2,'auto:processing','',88],[6,'pemail','treceipt','printed',1,'auto:completed','',88],\n [7,'pstation','treceipt','printed',1,'reprint','',130],[8,'pbar','tkitchen','cancelled',0,'auto:processing','Cancelled by manager',190],[9,'pkitchen','tkitchen','printed',1,'auto:processing','',260],\n [0,'pstation','tkitchen','printed',1,'test','',300],\n];\nforeach($rows as $r){ $p=$printers[$r[1]]; $when=gmdate('Y-m-d H:i:s',time()-$r[7]*60);\n $wpdb->insert($t,['order_id'=>$r[5]==='test'?0:$orders[$r[0]]->get_id(),'printer_id'=>$r[1],'template_id'=>$r[2],'method'=>$p['method'],'status'=>$r[3],'copies'=>1,'attempts'=>$r[4],'source'=>$r[5],'station'=>in_array($r[3],['printed'])&&in_array($p['method'],['station_html','station_escpos'])?'Front counter iPad':'','error'=>$r[6]?:null,'meta'=>wp_json_encode([]),'created_gmt'=>$when,'updated_gmt'=>$when,'printed_gmt'=>$r[3]==='printed'?$when:null]); }\nPrintPilot_Settings::touch_station('Front counter iPad',['ready'=>['pstation','pbar'],'printers'=>['pstation','pbar']]);\nupdate_option('permalink_structure','/%postname%/'); flush_rewrite_rules();\n"
+  }
+ ]
+}

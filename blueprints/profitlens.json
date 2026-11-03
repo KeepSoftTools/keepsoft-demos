@@ -1,0 +1,91 @@
+{
+ "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+ "meta": {
+  "title": "ProfitLens live demo",
+  "author": "Keepsoft",
+  "description": "Throwaway live demo of ProfitLens with seeded Australian sample data."
+ },
+ "landingPage": "/wp-admin/admin.php?page=profitlens",
+ "preferredVersions": {
+  "php": "8.2",
+  "wp": "latest"
+ },
+ "features": {
+  "networking": true
+ },
+ "steps": [
+  {
+   "step": "mkdir",
+   "path": "/wordpress/wp-content/mu-plugins"
+  },
+  {
+   "step": "writeFile",
+   "path": "/wordpress/wp-content/mu-plugins/keepsoft-demo.php",
+   "data": "<?php\n/**\n * Plugin Name: Keepsoft Demo Helper\n * Description: Demo-only helper loaded by the Keepsoft live-demo blueprints. Not part of any product download.\n */\nif ( ! defined( 'ABSPATH' ) ) { exit; }\n\nfunction keepsoft_demo_cfg() {\n\t$c = get_option( 'keepsoft_demo', array() );\n\treturn is_array( $c ) ? $c : array();\n}\n\n// No outbound mail, no update checks, no nags.\nadd_filter( 'pre_wp_mail', '__return_true' );\nadd_filter( 'auto_update_core', '__return_false' );\nadd_filter( 'automatic_updater_disabled', '__return_true' );\nadd_filter( 'woocommerce_enable_setup_wizard', '__return_false' );\nadd_filter( 'woocommerce_allow_marketplace_suggestions', '__return_false' );\nadd_filter( 'woocommerce_helper_suppress_admin_notices', '__return_true' );\nforeach ( array( 'pre_site_transient_update_core', 'pre_site_transient_update_plugins', 'pre_site_transient_update_themes' ) as $t ) {\n\tadd_filter( $t, function () {\n\t\treturn (object) array( 'last_checked' => time(), 'version_checked' => get_bloginfo( 'version' ), 'updates' => array() );\n\t} );\n}\nadd_action( 'admin_init', function () {\n\tremove_action( 'admin_notices', 'update_nag', 3 );\n\tremove_action( 'network_admin_notices', 'update_nag', 3 );\n\tremove_action( 'admin_notices', 'maintenance_nag' );\n\tremove_action( 'welcome_panel', 'wp_welcome_panel' );\n\tdelete_transient( '_wc_activation_redirect' );\n}, 1 );\n\n// The throwaway-demo notice.\nadd_action( 'admin_notices', function () {\n\t$c   = keepsoft_demo_cfg();\n\t$buy = ! empty( $c['buy'] ) ? $c['buy'] : 'https://codecanyon.net/user/keepsoft';\n\t$nm  = ! empty( $c['name'] ) ? $c['name'] : 'this plugin';\n\techo '<div class=\"notice notice-info keepsoft-notice\" style=\"border-left-color:#2563eb\"><p><strong>This is a throwaway Keepsoft demo</strong> &mdash; changes are not saved and the site resets when you close the tab. <a href=\"' . esc_url( $buy ) . '\" target=\"_blank\" rel=\"noopener\"><strong>Buy ' . esc_html( $nm ) . ' on CodeCanyon &rarr;</strong></a></p></div>';\n}, 1 );\nadd_action( 'admin_head', function () {\n\techo '<style>.update-nag,.notice.woocommerce-message,.wc-admin-notice,#wp-admin-bar-updates,.woocommerce-store-alerts,#wc-admin-onboarding-banner,.jetpack-jitm-message,#contextual-help-link-wrap,#screen-options-link-wrap{display:none!important}.keepsoft-notice{margin:12px 20px 0 2px!important}</style>';\n} );\nadd_filter( 'show_admin_bar', '__return_true' );\n\n// Small front-end pill with quick links.\nadd_action( 'wp_footer', function () {\n\t$c = keepsoft_demo_cfg();\n\tif ( empty( $c ) ) { return; }\n\t$links = ! empty( $c['links'] ) && is_array( $c['links'] ) ? $c['links'] : array();\n\t$buy   = ! empty( $c['buy'] ) ? $c['buy'] : 'https://codecanyon.net/user/keepsoft';\n\techo '<div style=\"position:fixed;left:12px;bottom:12px;z-index:99999;background:#0f172a;color:#e2e8f0;font:13px/1.4 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);max-width:calc(100vw - 24px)\">';\n\techo '<strong style=\"color:#fff\">Keepsoft demo</strong> &middot; throwaway site';\n\tforeach ( $links as $l ) { if ( '@orders' === $l[1] ) { $l[1] = ( class_exists( '\\\\Automattic\\\\WooCommerce\\\\Utilities\\\\OrderUtil' ) && \\Automattic\\WooCommerce\\Utilities\\OrderUtil::custom_orders_table_usage_is_enabled() ) ? 'admin.php?page=wc-orders' : 'edit.php?post_type=shop_order'; } echo ' &middot; <a style=\"color:#7dd3fc\" href=\"' . esc_url( 0 === strpos( $l[1], '/' ) ? home_url( $l[1] ) : admin_url( $l[1] ) ) . '\">' . esc_html( $l[0] ) . '</a>'; }\n\techo ' &middot; <a style=\"color:#fbbf24\" target=\"_blank\" rel=\"noopener\" href=\"' . esc_url( $buy ) . '\">Buy on CodeCanyon</a></div>';\n} );\n\n/**\n * AccessFix demo shim: the scanner normally fetches its own pages over HTTP. Inside WordPress Playground\n * a site cannot reliably call itself, so for scanner requests we render the page in-process (post content\n * in a simple page shell), run AccessFix's real render-time fixers over it, and hand that HTML back.\n */\nfunction keepsoft_af_install_shim() {\n\tadd_filter( 'pre_http_request', function ( $pre, $args, $url ) {\n\t\tif ( false === strpos( $url, 'accessfix_scan=' ) || ! class_exists( 'AccessFix_Fixers' ) ) { return $pre; }\n\t\t$clean = remove_query_arg( array( 'accessfix_scan', 'af_ts' ), $url );\n\t\t$pid   = (int) url_to_postid( $clean );\n\t\t$post  = $pid ? get_post( $pid ) : null;\n\t\tif ( ! $post ) {\n\t\t\t$front = (int) get_option( 'page_on_front' );\n\t\t\t$post  = $front ? get_post( $front ) : null;\n\t\t}\n\t\tif ( ! $post ) { return array( 'headers' => array(), 'body' => '', 'response' => array( 'code' => 404, 'message' => 'Not Found' ), 'cookies' => array(), 'filename' => null ); }\n\t\t$content = apply_filters( 'the_content', $post->post_content );\n\t\t$nav = '';\n\t\tforeach ( get_posts( array( 'post_type' => 'page', 'numberposts' => 8, 'orderby' => 'ID', 'order' => 'ASC' ) ) as $p ) { $nav .= '<a href=\"' . esc_url( get_permalink( $p ) ) . '\">' . esc_html( $p->post_title ) . '</a> '; }\n\t\t$html = '<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>' . esc_html( get_the_title( $post ) ) . ' - ' . esc_html( get_bloginfo( 'name' ) ) . '</title></head><body><header><a href=\"' . esc_url( home_url( '/' ) ) . '\">' . esc_html( get_bloginfo( 'name' ) ) . '</a><nav>' . $nav . '</nav></header><main id=\"content\">' . $content . '</main><footer><p>&copy; ' . esc_html( get_bloginfo( 'name' ) ) . '</p></footer></body></html>';\n\t\t// Equivalent of AccessFix_Fixers::process(), without its Content-Type check (REST responses are JSON).\n\t\t$set = function ( $prop, $val ) { $r = new ReflectionProperty( 'AccessFix_Fixers', $prop ); $r->setAccessible( true ); $r->setValue( null, $val ); };\n\t\t$get = function ( $prop ) { $r = new ReflectionProperty( 'AccessFix_Fixers', $prop ); $r->setAccessible( true ); return $r->getValue(); };\n\t\t$set( 'scan_mode', true ); $set( 'fixes', array() ); $set( 'ids', array() ); $set( 's', AccessFix_Settings::all() );\n\t\t$out = AccessFix_Fixers::apply( $html );\n\t\t$out .= '<!--af-fixes:' . base64_encode( wp_json_encode( array_slice( (array) $get( 'fixes' ), 0, 400 ) ) ) . '-->';\n\t\treturn array( 'headers' => array( 'content-type' => 'text/html' ), 'body' => $out, 'response' => array( 'code' => 200, 'message' => 'OK' ), 'cookies' => array(), 'filename' => null );\n\t}, 10, 3 );\n}\n$keepsoft_cfg = get_option( 'keepsoft_demo', array() );\nif ( is_array( $keepsoft_cfg ) && ! empty( $keepsoft_cfg['slug'] ) && 'accessfix' === $keepsoft_cfg['slug'] ) { keepsoft_af_install_shim(); }\n"
+  },
+  {
+   "step": "installPlugin",
+   "pluginData": {
+    "resource": "wordpress.org/plugins",
+    "slug": "woocommerce"
+   },
+   "options": {
+    "activate": true
+   }
+  },
+  {
+   "step": "installPlugin",
+   "pluginData": {
+    "resource": "url",
+    "url": "__BASE__/plugins/profitlens.zip"
+   },
+   "options": {
+    "activate": true
+   }
+  },
+  {
+   "step": "setSiteOptions",
+   "options": {
+    "blogname": "ProfitLens Demo \u2014 Keepsoft",
+    "blogdescription": "Live demo",
+    "keepsoft_demo": {
+     "slug": "profitlens",
+     "name": "ProfitLens",
+     "buy": "__BUY__",
+     "links": [
+      [
+       "Profit report",
+       "admin.php?page=profitlens"
+      ],
+      [
+       "Orders",
+       "@orders"
+      ]
+     ]
+    },
+    "woocommerce_currency": "AUD",
+    "woocommerce_default_country": "AU:VIC",
+    "woocommerce_coming_soon": "no",
+    "woocommerce_store_pages_only": "no",
+    "woocommerce_onboarding_profile": {
+     "skipped": true
+    },
+    "woocommerce_task_list_hidden": "yes",
+    "woocommerce_task_list_complete": "yes",
+    "woocommerce_show_marketplace_suggestions": "no",
+    "woocommerce_allow_tracking": "no",
+    "woocommerce_admin_notices": [],
+    "woocommerce_calc_taxes": "yes",
+    "woocommerce_prices_include_tax": "no"
+   }
+  },
+  {
+   "step": "login",
+   "username": "admin"
+  },
+  {
+   "step": "runPHP",
+   "code": "<?php require_once '/wordpress/wp-load.php';\n// Keepsoft demo seed - ProfitLens. A small coffee-gear store, 30 days of AU orders, costs, fees and ad spend.\nadd_filter('pre_wp_mail','__return_true'); global $wpdb;\nupdate_option('woocommerce_calc_taxes','yes'); update_option('woocommerce_prices_include_tax','no'); update_option('woocommerce_tax_based_on','billing');\n$wpdb->query(\"DELETE FROM {$wpdb->prefix}woocommerce_tax_rates\");\nWC_Tax::_insert_tax_rate(['tax_rate_country'=>'AU','tax_rate'=>'10.0000','tax_rate_name'=>'GST','tax_rate_priority'=>1,'tax_rate_compound'=>0,'tax_rate_shipping'=>1,'tax_rate_order'=>1,'tax_rate_class'=>'']);\nupdate_option('pl_gateway_fees',['stripe'=>['percent'=>1.75,'fixed'=>0.30],'paypal'=>['percent'=>2.6,'fixed'=>0.30]]);\nupdate_option('pl_shipping_costs',['flat_rate'=>9.5,'free_shipping'=>8]); update_option('pl_packaging_cost','1.2'); update_option('pl_default_margin','45'); update_option('pl_shipping_fallback','income');\n$cats=[]; foreach(['Coffee Gear','Homewares','Gifts'] as $c){$t=wp_insert_term($c,'product_cat'); $cats[$c]=is_wp_error($t)?get_term_by('name',$c,'product_cat')->term_id:$t['term_id'];}\n$defs=[['Ceramic Pour-Over Dripper',49,18,'Coffee Gear'],['Gooseneck Kettle 1L',89,36,'Coffee Gear'],['Burr Hand Grinder',129,52,'Coffee Gear'],['Espresso Tamper Set',45,14,'Coffee Gear'],['Linen Tea Towel 3-Pack',34,9,'Homewares'],['Stoneware Mug Set of 4',68,31,'Homewares'],['Marble Serving Board',79,38,'Homewares'],['Beeswax Candle Trio',39,12,'Gifts'],['Barista Gift Hamper',95,102,'Gifts'],['Pour-Over Starter Kit',119,null,'Coffee Gear']];\n$P=[]; foreach($defs as $i=>[$n,$pr,$co,$c]){$p=new WC_Product_Simple();$p->set_name($n);$p->set_sku('KC-'.(100+$i));$p->set_regular_price($pr);$p->set_status('publish');$p->set_category_ids([$cats[$c]]);$id=$p->save(); if($co!==null) update_post_meta($id,'_pl_cost',$co); $P[]=wc_get_product($id);}\nforeach([['WELCOME10',10],['EOFY15',15]] as [$code,$amt]){$c=new WC_Coupon();$c->set_code($code);$c->set_discount_type('percent');$c->set_amount($amt);$c->save();}\n$names=[['Emily','Hartley','Fitzroy','3065'],['Noah','Bennett','Richmond','3121'],['Chloe','Nguyen','Footscray','3011'],['Lachlan','Murray','Geelong','3220'],['Isla','Campbell','Brunswick','3056'],['Jack','Dimitriou','Preston','3072'],['Ruby','Anderson','St Kilda','3182'],['Oliver','Tan','Docklands','3008'],['Matilda','Reid','Ballarat','3350'],['Harrison','Cole','Hawthorn','3122'],['Georgia','Sinclair','Williamstown','3016'],['Max','Pavlovic','Sunshine','3020']];\n$intl=[['US','Austin'],['NZ','Auckland'],['GB','Leeds'],['NZ','Wellington']];\nmt_srand(11); $statuses=['completed','completed','completed','completed','completed','processing']; $ords=[];\nfor($d=44;$d>=0;$d--){ if($d>29&&$d%3!=0) continue; $n=($d>29)?1:(($d%5==2?0:1)+($d%7==5?1:0)); if(!$n) continue;\n for($k=0;$k<$n;$k++){ $nm=$names[mt_rand(0,11)]; $au=mt_rand(1,10)>2; $ic=$intl[mt_rand(0,3)];\n  $o=wc_create_order(['status'=>'pending']); $addr=['first_name'=>$nm[0],'last_name'=>$nm[1],'email'=>strtolower($nm[0].'.'.$nm[1]).'@gmail.com','country'=>$au?'AU':$ic[0],'state'=>$au?'VIC':'','postcode'=>$au?$nm[3]:'1010','city'=>$au?$nm[2]:$ic[1],'address_1'=>mt_rand(2,98).' High Street'];\n  $o->set_address($addr,'billing');$o->set_address($addr,'shipping');\n  $lines=mt_rand(1,2); $used=[]; for($l=0;$l<$lines;$l++){ $pi=mt_rand(0,9); if(in_array($pi,$used))continue; $used[]=$pi; $o->add_product($P[$pi],mt_rand(1,10)>8?2:1); }\n  $r=mt_rand(1,10); if($r==1)$o->apply_coupon('WELCOME10'); elseif($r==2&&$d<12&&$d>=0)$o->apply_coupon('EOFY15');\n  $s=new WC_Order_Item_Shipping(); $s->set_method_title($au?'Flat rate':'International'); $s->set_method_id('flat_rate'); $s->set_total($au?9.5:24); $o->add_item($s);\n  $o->set_payment_method(mt_rand(1,10)>4?'stripe':'paypal'); $o->set_date_created(gmdate('Y-m-d',time()-$d*86400).' '.sprintf('%02d:%02d:00',mt_rand(0,12),mt_rand(0,59))); $o->calculate_totals(true);\n  $st=$d<2?'processing':$statuses[mt_rand(0,5)]; if(mt_rand(1,40)==1)$st='cancelled'; $o->set_status($st); $o->save(); $ords[]=$o; } }\n$rf=0; foreach($ords as $o){ if($rf>=3)break; if($o->get_status()!=='completed')continue; if(mt_rand(1,8)!=1)continue; $it=array_values($o->get_items())[0]; $tx=$it->get_taxes(); $t=array_sum($tx['total']); $amt=(float)$it->get_total()/$it->get_quantity();\n  wc_create_refund(['order_id'=>$o->get_id(),'amount'=>round($amt+$t/$it->get_quantity(),2),'line_items'=>[$it->get_id()=>['qty'=>1,'refund_total'=>$amt,'refund_tax'=>[]]],'refund_payment'=>false,'restock_items'=>false]); $rf++; }\n$exp=ProfitLens_Install::table('expenses');\nfor($d=59;$d>=0;$d--){ $day=gmdate('Y-m-d',time()-$d*86400); $wpdb->insert($exp,['date_start'=>$day,'date_end'=>$day,'kind'=>'ad','source'=>'meta','campaign'=>'Always-on retargeting','amount'=>mt_rand(500,1100)/100,'note'=>'','created_at'=>gmdate('Y-m-d H:i:s')]); if($d%2==0)$wpdb->insert($exp,['date_start'=>$day,'date_end'=>$day,'kind'=>'ad','source'=>'google','campaign'=>'Shopping - Coffee Gear','amount'=>mt_rand(400,900)/100,'note'=>'','created_at'=>gmdate('Y-m-d H:i:s')]); }\n$rec=ProfitLens_Install::table('recurring');\nforeach([['Shopify plan',79,'monthly'],['Warehouse rent',60,'weekly'],['Klaviyo',45,'monthly']] as $r){ $wpdb->insert($rec,['name'=>$r[0],'amount'=>$r[1],'period'=>$r[2],'date_start'=>gmdate('Y-m-01',time()-70*86400),'date_end'=>null,'active'=>1]); }\nProfitLens_Engine::process_queue();\nupdate_option('permalink_structure','/%postname%/'); flush_rewrite_rules();\n"
+  }
+ ]
+}
