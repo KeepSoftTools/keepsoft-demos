@@ -13,7 +13,7 @@
       if (!r.ok) throw new Error('Could not load blueprint (' + r.status + ')');
       return r.text();
     }).then(function (txt) {
-      var buy = buyMap[slug] || 'https://codecanyon.net/user/keepsoft';
+      var buy = buyMap[slug] || '';
       txt = txt.split('__BASE__').join(base).split('__BUY__').join(JSON.stringify(buy).slice(1, -1));
       var json = ascii(JSON.stringify(JSON.parse(txt)));
       return 'https://playground.wordpress.net/#' + btoa(json);
