@@ -12,7 +12,7 @@ Free live demos for five WordPress plugins (QuoteFlow, QuoteSign, ProfitLens, Pr
 
 Nothing needs editing for the links to work. The pages work out their own address.
 
-## URLs to paste into Envato's "Live preview URL"
+## URLs to paste into the "Demo URL" field on Codester
 
 Replace `YOUR-USERNAME` with your GitHub username.
 
@@ -28,13 +28,13 @@ Replace `YOUR-USERNAME` with your GitHub username.
 
 Landing page for all products: `https://YOUR-USERNAME.github.io/keepsoft-demos/`
 
-Each plugin link shows a short "Loading the demo" page for 2 seconds and then opens the demo on WordPress Playground (playground.wordpress.net). Envato reviewers and buyers see a real WordPress admin, already logged in, filled with Australian sample data.
+Each plugin link shows a short "Loading the demo" page for 2 seconds and then opens the demo on WordPress Playground (playground.wordpress.net). Reviewers and buyers see a real WordPress admin, already logged in, filled with Australian sample data.
 
-Expected first-load times (a fresh WordPress is built inside the visitor's browser each time): QuoteFlow and AccessFix about 30 seconds, QuoteSign and PrintPilot about a minute, ProfitLens 1 to 2 minutes. Slow connections and phones take longer. Tell Envato reviewers this in the item's preview notes.
+Expected first-load times (a fresh WordPress is built inside the visitor's browser each time): QuoteFlow and AccessFix about 30 seconds, QuoteSign and PrintPilot about a minute, ProfitLens 1 to 2 minutes. Slow connections and phones take longer. Mention this in the item's preview notes.
 
-## After Envato approves each item
+## Buy links
 
-Open `config.js` in the repository (pencil icon), replace each `https://codecanyon.net/user/keepsoft` with the real item page, and commit. This updates the "Buy" buttons on the landing page and inside every demo.
+The demos intentionally contain no buy links (Codester bans them). `KEEPSOFT_BUY` in `config.js` stays empty.
 
 ## What is in this folder
 
@@ -44,9 +44,9 @@ Open `config.js` in the repository (pencil icon), replace each `https://codecany
 | `demo/*.html` | Short, stable demo links with the loading screen |
 | `js/launch.js` | Builds the Playground blueprint in the browser and opens it |
 | `blueprints/*.json` | The Playground recipe for each plugin (install, seed data, log in, landing screen) |
-| `plugins/*.zip` | The plugin zips Playground installs (copies of the Envato downloads) |
+| `plugins/*.zip` | The plugin zips Playground installs (copies of the download zips) |
 | `seeds/*.php` | The sample-data scripts that the blueprints run (readable source) |
-| `mu/keepsoft-demo.php` | Demo-only helper: the "throwaway demo" notice, hides update nags, links to Buy |
+| `mu/keepsoft-demo.php` | Demo-only helper: the "throwaway demo" notice, hides update nags |
 | `demo-assets/` | Product images used by the QuoteSign demo |
 | `tradepro/` | The TradePro static site |
 | `proposalpro/` | Proposal Pro preview screenshots |
