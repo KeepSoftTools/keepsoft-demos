@@ -1,6 +1,6 @@
 /*!
  * TradePro - main.js (vanilla JS, no dependencies)
- * Author: Keepsoft (https://codecanyon.net/user/keepsoft)
+ * Author: Keepsoft (https://keepsofttools.github.io/keepsoft-demos/)
  * Copyright (C) 2026 Keepsoft
  * Modules: theme, header, mobile menu, back-to-top, counters, accordion, tabs,
  * testimonial slider, before/after, project filter, forms, cookie notice, reveal.
